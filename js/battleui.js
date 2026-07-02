@@ -215,10 +215,17 @@ function domPresenter() {
 async function startBattlePhase() {
   const run = State.run;
   BattleUI.skipping = false;
-  const enemies = generateEnemyTeam(run.turn);
+  // Lock the enemy squad in the save so reloading mid-battle can't reroll it.
+  if (!run.pendingEnemies) {
+    run.pendingEnemies = generateEnemyTeam(run.turn);
+    save();
+  }
+  const enemies = run.pendingEnemies;
   openBattleOverlay();
   const result = await runBattle(teamUnits(), enemies, domPresenter());
   const rewards = battleRewards(result, enemies);
+  run.pendingEnemies = null;
+  save();
   await showBattleResult(result, rewards, enemies);
 }
 

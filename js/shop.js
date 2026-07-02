@@ -15,7 +15,7 @@ function startRun() {
     streak: 0,
     team: [null, null, null, null, null],
     shop: [],
-    caughtThisRun: 0,
+    pendingEnemies: null, // fixed once FIGHT is pressed, survives reloads
   };
   rollShop(true);
   State.profile.runsPlayed++;
@@ -130,7 +130,7 @@ function moveUnit(fromIdx, toIdx) {
   const a = run.team[fromIdx];
   if (!a) return;
   const b = run.team[toIdx];
-  if (b && b.speciesId === a.speciesId && (a.xp < 6 || b.xp < 6)) {
+  if (b && b.speciesId === a.speciesId && b.xp < 6) {
     // merge: combined xp, keep target's item; extra item back to inventory
     b.xp = Math.min(6, a.xp + b.xp);
     if (a.item) { if (!b.item) b.item = a.item; else grantItem(a.item); }
