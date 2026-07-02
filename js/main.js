@@ -48,6 +48,8 @@ function sfx(kind) {
 function initGame() {
   load();
   renderAll();
+  // A run decided right before a reload still owes its end-of-run rewards.
+  resolveFinishedRun();
   // countdown labels & idle refresher
   setInterval(refreshTimers, 1000);
   // periodic autosave (timers etc. are derived from timestamps, but cheap insurance)

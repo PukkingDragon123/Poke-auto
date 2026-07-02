@@ -16,6 +16,8 @@ function startRun() {
     team: [null, null, null, null, null],
     shop: [],
     pendingEnemies: null, // fixed once FIGHT is pressed, survives reloads
+    battleSeed: null,     // battle RNG seed, fixed alongside pendingEnemies
+    finished: null,       // 'won' | 'lost' once decided, until rewards collected
   };
   rollShop(true);
   State.profile.runsPlayed++;
@@ -64,6 +66,8 @@ function rollShop(free = false) {
   const run = State.run;
   if (!free) {
     if (run.gold < RUN.rerollCost) return false;
+    // With an empty team, never let a reroll burn the gold needed to recruit.
+    if (teamUnits().length === 0 && run.gold - RUN.rerollCost < RUN.buyCost) return false;
     run.gold -= RUN.rerollCost;
   }
   const pool = shopPool();
@@ -116,6 +120,8 @@ function sellUnit(teamIdx) {
   const run = State.run;
   const unit = run.team[teamIdx];
   if (!unit) return false;
+  // Selling the last monster must always leave enough gold to recruit again.
+  if (teamUnits().length === 1 && run.gold + RUN.sellValue * unitLevel(unit) < RUN.buyCost) return false;
   if (unit.item) grantItem(unit.item); // held item returns to inventory
   run.gold += RUN.sellValue * unitLevel(unit);
   run.team[teamIdx] = null;

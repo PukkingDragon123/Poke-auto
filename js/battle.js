@@ -9,6 +9,17 @@ const MAX_ROUNDS = 40;
 const FATIGUE_START = 12; // after this round, escalating chip damage ends stalls
 const ONHURT_CAP = 4;     // per unit per battle, prevents proc ping-pong
 
+// Small seeded PRNG so a battle replays identically after a reload.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 // Build a battle-ready fighter from a roster unit.
 // `meta` = true applies collection stars & held items (player side);
 // enemy units pass their own pre-built stats.
@@ -40,7 +51,7 @@ function passivePower(fighter) {
 
 // playerTeam / enemyTeam: arrays of roster units (front first).
 // presenter: async visual hooks (see ui.js). Returns 'win' | 'loss' | 'draw'.
-async function runBattle(playerTeam, enemyTeam, presenter) {
+async function runBattle(playerTeam, enemyTeam, presenter, rng = Math.random) {
   const P = presenter;
   const allies = playerTeam.map((u, i) => makeFighter(u, 'ally', i));
   const foes = enemyTeam.map((u, i) => makeFighter(u, 'foe', i));
@@ -130,7 +141,7 @@ async function runBattle(playerTeam, enemyTeam, presenter) {
         if (foesArr.length) await dealDamage(foesArr[foesArr.length - 1], amount, actor, { isMove });
         break;
       case 'dmgRandom': {
-        const t = foesArr[Math.floor(Math.random() * foesArr.length)];
+        const t = foesArr[Math.floor(rng() * foesArr.length)];
         if (t) await dealDamage(t, amount, actor, { isMove });
         break;
       }

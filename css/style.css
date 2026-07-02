@@ -206,6 +206,11 @@ body {
 /* ---------------- run header ---------------- */
 
 .run-head { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; }
+.give-up {
+  padding: 3px 7px; opacity: 0.85;
+  margin-left: 8px; font-size: 9px;
+  vertical-align: middle;
+}
 .run-row { display: flex; align-items: center; justify-content: space-between; }
 .run-lbl { font-size: 10px; letter-spacing: 2px; color: var(--ink-dim); }
 .hearts .heart { color: var(--danger); font-size: 15px; margin-left: 2px; text-shadow: 1px 1px 0 #000; }

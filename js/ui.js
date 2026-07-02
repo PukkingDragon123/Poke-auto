@@ -249,7 +249,21 @@ function renderBattleTab(root) {
   head.innerHTML = `
     <div class="run-row"><span class="run-lbl">TURN ${run.turn}</span><span class="hearts">${hearts}</span></div>
     <div class="run-row"><span class="run-lbl">TROPHIES</span><span class="pips">${pips}</span></div>
-    <div class="run-row gold-row"><span class="run-lbl">GOLD</span><span class="gold-amt">◈ ${run.gold}</span></div>`;
+    <div class="run-row gold-row"><span class="run-lbl">GOLD <button class="btn btn-small give-up" title="Abandon expedition">🏳 QUIT</button></span><span class="gold-amt">◈ ${run.gold}</span></div>`;
+  const giveUp = head.querySelector('.give-up');
+  giveUp.onclick = () => {
+    const body = el('div', 'center');
+    body.innerHTML = `<div class="card-title">ABANDON EXPEDITION?</div>
+      <div class="card-body">You keep everything earned so far, plus a small consolation of essence. The run ends as a defeat.</div>`;
+    const yes = el('button', 'btn btn-danger', 'ABANDON');
+    yes.onclick = () => {
+      closeModal();
+      const rewards = endRun(false);
+      runEndModal(false, rewards);
+    };
+    body.appendChild(yes);
+    showModal(body);
+  };
   root.appendChild(head);
 
   // team
@@ -272,7 +286,13 @@ function renderBattleTab(root) {
 
   const btnRow = el('div', 'btn-row');
   const reroll = el('button', 'btn' + (run.gold < RUN.rerollCost ? ' btn-disabled' : ''), `↻ REROLL ${RUN.rerollCost}◈`);
-  reroll.onclick = () => { if (rollShop()) { sfx('tap'); renderAll(); } else toast('Not enough gold!', 'bad'); };
+  reroll.onclick = () => {
+    UI.pendingBuy = null;
+    UI.moveFrom = null;
+    if (rollShop()) { sfx('tap'); renderAll(); }
+    else if (teamUnits().length === 0 && run.gold >= RUN.rerollCost) toast('Recruit a monster first!', 'bad');
+    else toast('Not enough gold!', 'bad');
+  };
   const items = el('button', 'btn', `🎒 ITEMS (${Object.values(State.profile.items).reduce((a, b) => a + b, 0)})`);
   items.onclick = () => { sfx('tap'); openItemDrawer(); };
   btnRow.appendChild(reroll);
@@ -408,7 +428,12 @@ function openUnitSheet(i) {
   const move = el('button', 'btn', 'MOVE ⇄');
   move.onclick = () => { closeModal(); UI.moveFrom = i; renderAll(); };
   const sell = el('button', 'btn btn-danger', `SELL +${RUN.sellValue * st.level}◈`);
-  sell.onclick = () => { sellUnit(i); sfx('buy'); closeModal(); renderAll(); };
+  sell.onclick = () => {
+    closeModal();
+    if (sellUnit(i)) sfx('buy');
+    else toast("Can't sell your last monster!", 'bad');
+    renderAll();
+  };
   btns.appendChild(move);
   btns.appendChild(sell);
   body.appendChild(btns);

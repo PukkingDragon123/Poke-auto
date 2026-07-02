@@ -215,16 +215,28 @@ function domPresenter() {
 async function startBattlePhase() {
   const run = State.run;
   BattleUI.skipping = false;
-  // Lock the enemy squad in the save so reloading mid-battle can't reroll it.
+  UI.pendingBuy = null;
+  UI.moveFrom = null;
+  // Lock the enemy squad + battle seed in the save so reloading mid-battle
+  // replays the exact same fight instead of rerolling a fresh one.
   if (!run.pendingEnemies) {
     run.pendingEnemies = generateEnemyTeam(run.turn);
+    run.battleSeed = Math.floor(Math.random() * 2 ** 31);
     save();
   }
+  if (run.battleSeed == null) { run.battleSeed = Math.floor(Math.random() * 2 ** 31); save(); }
   const enemies = run.pendingEnemies;
   openBattleOverlay();
-  const result = await runBattle(teamUnits(), enemies, domPresenter());
+  const result = await runBattle(teamUnits(), enemies, domPresenter(), mulberry32(run.battleSeed));
   const rewards = battleRewards(result, enemies);
+  // Commit the outcome atomically with the rewards: advance the turn (or mark
+  // the run decided) BEFORE the player can reload on the result screen —
+  // otherwise refreshing would re-fight the same turn with rewards banked.
   run.pendingEnemies = null;
+  run.battleSeed = null;
+  const over = runOver();
+  if (over) run.finished = over;
+  else advanceTurn();
   save();
   await showBattleResult(result, rewards, enemies);
 }
@@ -396,17 +408,17 @@ function catchPhase(speciesIds) {
 
 function finishBattlePhase() {
   closeBattleOverlay();
-  const over = runOver();
-  if (over === 'won') {
-    const rewards = endRun(true);
-    runEndModal(true, rewards);
-  } else if (over === 'lost') {
-    const rewards = endRun(false);
-    runEndModal(false, rewards);
-  } else {
-    advanceTurn();
-    renderAll();
-  }
+  resolveFinishedRun() || renderAll();
+}
+
+// If the active run is decided (possibly restored from a reload on the
+// result screen), grant the end-of-run rewards. Returns true if it did.
+function resolveFinishedRun() {
+  if (!State.run || !State.run.finished) return false;
+  const won = State.run.finished === 'won';
+  const rewards = endRun(won);
+  runEndModal(won, rewards);
+  return true;
 }
 
 function runEndModal(won, rewards) {
